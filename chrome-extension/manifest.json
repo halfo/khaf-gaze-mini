@@ -6,5 +6,10 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": "images/icon.png"
-  }
+  },
+  "background": {
+    "service_worker": "scripts/service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["storage"]
 }
