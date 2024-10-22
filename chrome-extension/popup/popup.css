@@ -1,0 +1,17 @@
+main {
+  width: 25ch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+}
+
+input[type="range"] {
+  flex: 1;
+}

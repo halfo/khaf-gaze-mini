@@ -1,6 +1,24 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="popup.css">
+  </head>
   <body>
-    <h1>Hello Extensions</h1>
-    <script src="popup.js"></script>
+    <main>
+      <label for="guard">
+        <span>Enable / disable guard:</span>
+        <input type="checkbox" name="guard" />
+      </label>
+
+      <label for="grayscale">
+        <span>Gray scale:</span>
+        <input type="checkbox" name="grayscale" checked="false" disabled />
+      </label>
+
+      <label for="blur">
+        <span>Blur ratio:</span>
+        <input type="range" name="blur" min="0" max="1" step=".1" disabled />
+      </label>
+    </main>
+    <script src="popup.js" type="module"></script>
   </body>
 </html>
