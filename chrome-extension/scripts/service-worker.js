@@ -1,5 +1,10 @@
-import * as keyValDb from "./keyval.js";
-
-keyValDb.set('hello', 1000);
-console.log(keyValDb.get('hello'));
-
+chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
+  switch (message.action) {
+    case "guardEnabled":
+      enableGuard();
+      return true;
+    case "guardDisabled":
+      disableGuard();
+      return true;
+  }
+});

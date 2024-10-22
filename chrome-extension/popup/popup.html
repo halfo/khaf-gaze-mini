@@ -11,12 +11,20 @@
 
       <label for="grayscale">
         <span>Gray scale:</span>
-        <input type="checkbox" name="grayscale" checked="false" disabled />
+        <input type="checkbox" name="grayscale" disabled />
       </label>
 
       <label for="blur">
         <span>Blur ratio:</span>
-        <input type="range" name="blur" min="0" max="1" step=".1" disabled />
+        <input
+          type="range"
+          name="blur"
+          min="0"
+          max="1"
+          step=".1"
+          value=".5"
+          disabled
+        />
       </label>
     </main>
     <script src="popup.js" type="module"></script>
