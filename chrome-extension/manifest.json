@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Kahf Guard Mini",
+  "description": "Blur haram images",
+  "version": "1.0",
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "images/icon.png"
+  }
+}
