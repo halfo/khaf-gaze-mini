@@ -1,82 +1,96 @@
 const $ = function (args) {
   return document.querySelector(args);
 };
-const $$ = function (args) {
-  return document.querySelectorAll(args);
-};
 
 HTMLElement.prototype.on = function (a, b, c) {
   return this.addEventListener(a, b, c);
 };
 
-const setState = async (state) => {
-  await chrome.storage.local.set(state);
-};
-
-const getState = async (keys) => {
-  return await chrome.storage.local.get(keys);
-};
+let State;
 
 const guardInput = $('input[name="guard"]');
 const grayscaleInput = $('input[name="grayscale"]');
 const blurInput = $('input[name="blur"]');
 
 grayscaleInput.on("click", (evt) => {
-  setState({ grayscale: evt.target.checked });
+  State.grayscale = evt.target.checked;
 });
 
 blurInput.on("click", (evt) => {
-  setState({ blur: evt.target.value });
+  State.blur = evt.target.value;
 });
 
 const toggleGuard = (isEnabled) => {
-  const others = $$('input:not([name="guard"])');
-  others.forEach((input) => input.disabled = !isEnabled);
+  State.guard = isEnabled;
 
-  chrome.tabs.query({}, (tabs) => {
-    tabs.forEach((tab) => {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: (message) => {
-          console.log("Is enabled:", message);
-        },
-        args: [isEnabled],
-      });
-    });
-  });
+  const others = document.querySelectorAll('input:not([name="guard"])');
+  others.forEach((input) => input.disabled = !isEnabled);
 };
 
 guardInput.on("click", (evt) => {
-  const isEnabled = evt.target.checked;
-
-  setState({ guard: isEnabled });
-  toggleGuard(isEnabled);
+  toggleGuard(evt.target.checked);
 });
 
-getState(["guard", "grayscale", "blur"])
-  .then(({ guard, grayscale, blur }) => {
-    if (guard) {
-      guardInput.checked = true;
-      grayscaleInput.checked = grayscale;
-      blurInput.value = blur;
+const syncWithStore = (initialState) =>
+  new Proxy(initialState, {
+    async get(obj, key) {
+      obj[key] = await chrome.storage.local.get([key]);
+      return obj[key];
+    },
+    set(obj, key, val) {
+      obj[key] = val;
 
-      toggleGuard(true);
-    } else {
-      grayscaleInput.checked = grayscale ?? grayscaleInput.checked;
-      blurInput.value = blur ?? blurInput.value;
-
-      setState({
-        grayscale: grayscaleInput.checked,
-        blur: blurInput.value,
+      // If any value is changed, take action
+      // This might become a problem child
+      chrome.storage.local.set({ [key]: val }).then(() => {
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach((tab) => {
+            chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: (isEnabled, blur, grayscale) => {
+                document.querySelectorAll("img").forEach((img) => {
+                  img.style.filter = isEnabled
+                    ? `grayscale(${grayscale * 100}%) blur(${blur * 10}px)`
+                    : `grayscale(0) blur(0)`;
+                });
+              },
+              args: [obj.guard, obj.blur, obj.grayscale],
+            });
+          });
+        });
       });
-    }
-  })
-  .catch((_) => {
-    console.error(
-      'Failed to read from local storage in "kahf - guard - mini" extension.',
-    );
-    guardInput.disabled = true;
+
+      return true;
+    },
   });
+
+const init = async () => {
+  const { guard, grayscale, blur } = await chrome.storage.local.get([
+    "guard",
+    "grayscale",
+    "blur",
+  ]);
+
+  State = syncWithStore({ guard, grayscale, blur });
+
+  // Sync HTML with store
+  if (guard) {
+    guardInput.checked = true;
+    grayscaleInput.checked = grayscale;
+    blurInput.value = blur;
+
+    toggleGuard(true);
+  } else {
+    grayscaleInput.checked = grayscale ?? grayscaleInput.checked;
+    blurInput.value = blur ?? blurInput.value;
+
+    // If store is empty, sync store with HTML default value
+    State.grayscale = grayscaleInput.checked;
+    State.blur = blurInput.value;
+  }
+};
+
+init();
 
 const __devListenToStorageChanges = () => {
   chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -88,3 +102,5 @@ const __devListenToStorageChanges = () => {
     }
   });
 };
+
+// __devListenToStorageChanges();
