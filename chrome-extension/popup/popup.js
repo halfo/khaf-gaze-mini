@@ -34,7 +34,9 @@ guardInput.on("click", (evt) => {
 const syncWithStore = (initialState) =>
   new Proxy(initialState, {
     async get(obj, key) {
-      obj[key] = await chrome.storage.local.get([key]);
+      const { [key]: val } = await chrome.storage.local.get([key]);
+      obj[key] = val;
+
       return obj[key];
     },
     set(obj, key, val) {
@@ -47,14 +49,18 @@ const syncWithStore = (initialState) =>
           tabs.forEach((tab) => {
             chrome.scripting.executeScript({
               target: { tabId: tab.id },
-              func: (isEnabled, blur, grayscale) => {
-                document.querySelectorAll("img").forEach((img) => {
-                  img.style.filter = isEnabled
-                    ? `grayscale(${grayscale * 100}%) blur(${blur * 10}px)`
-                    : `grayscale(0) blur(0)`;
-                });
+              func: (tabId) => {
+                document.querySelectorAll("img").forEach((img) =>
+                  chrome.runtime.sendMessage({
+                    action: "get-verdict",
+                    payload: {
+                      tabId,
+                      src: img.src,
+                    },
+                  })
+                );
               },
-              args: [obj.guard, obj.blur, obj.grayscale],
+              args: [tab.id],
             });
           });
         });
@@ -88,6 +94,32 @@ const init = async () => {
     State.grayscale = grayscaleInput.checked;
     State.blur = blurInput.value;
   }
+
+  chrome.runtime.onMessage.addListener(async (message) => {
+    switch (message.action) {
+      case "verdict": {
+        const { verdict, src, tabId } = message.payload;
+        const guard = await State.guard;
+        const grayscale = await State.grayscale;
+        const blur = await State.blur;
+
+        const tab = await chrome.tabs.get(tabId);
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: (src, verdict, guard, grayscale, blur) => {
+            document.querySelectorAll(`img[src="${src}"]`).forEach((img) => {
+              img.style.filter = !verdict && guard
+                ? `grayscale(${grayscale * 100}%) blur(${blur * 10}px)`
+                : `grayscale(0) blur(0)`;
+            });
+          },
+          args: [src, verdict, guard, grayscale, blur],
+        });
+
+        return true;
+      }
+    }
+  });
 };
 
 init();
