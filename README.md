@@ -1,3 +1,3 @@
-# khaf-guard-mini
+# khaf-gaze-mini
 
-This is an attempt to create kahfguard browser extension
+This is an attempt to recreate kahfgaze browser extension
